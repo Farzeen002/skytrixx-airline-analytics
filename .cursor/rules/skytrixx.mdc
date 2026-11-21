@@ -13,8 +13,10 @@ This repo is a standalone airline commercial analytics prototype (not Caelix/tra
 - Shareable single HTML: `share/SkyTrixx-Airline-Analytics-Prototype.html`
 
 When explaining metrics, distinguish:
-1. Coupon sample grain (100 rows, 10 per flight) — fares, channels, ancillaries
-2. Flight capacity grain — load factor, ASK, RPK, full flown PAX
+1. Coupon sample grain (50,000 Air India rows, 10 per flight) — fares, channels, ancillaries, cabins, regions, journey type
+2. Flight capacity grain — load factor, ASK, RPK, full flown PAX (IB/OB sectors, Jan 2024–Dec 2025)
+
+Key dimensions: Ticket_Issue_Date vs Flown_Departure_Date; Week_Label Wk-1–Wk-4; Direct vs Connecting (Connecting_Point); cabins First/Business/Premium Economy/Economy; regions Asia/Africa/GCC/Europe/Americas/Domestic India.
 
 Do not invent business numbers. Prefer values from the Excel/JSON.
 Keep answers practical for airline commercial / revenue / network users.

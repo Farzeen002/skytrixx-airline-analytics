@@ -17,5 +17,6 @@ Open `share/SkyTrixx-Airline-Analytics-Prototype.html` in a browser.
 
 ## Source data
 
-- Excel: `SkyTrixx_Airline_Commercial_Analytics_Prototype.xlsx`
+- Excel: `SkyTrixx_Airline_Commercial_Analytics_Prototype.xlsx` (50,000 Air India coupons, Jan 2024–Dec 2025)
 - UI JSON: `src/data/prototype.json`
+- Regenerate: `py -3 scripts/generate_skytrixx_data.py`

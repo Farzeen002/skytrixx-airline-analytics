@@ -29,16 +29,25 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ] as const
 
+const YEARS = [2024, 2025] as const
+const DETAIL_ROW_LIMIT = 80
+
+const lastSeries = d.monthlySeries?.[d.monthlySeries.length - 1]
+const defaultYear = lastSeries?.year ?? 2025
+const defaultMonth = lastSeries?.monthName ?? 'Dec'
+
 const state: {
   tab: TabId
   grain: PeriodGrain
   week: string | null
   month: string | null
+  year: number | null
 } = {
   tab: 'overview',
   grain: null,
   week: null,
   month: null,
+  year: null,
 }
 
 const yieldPerRpk = kpis.totalRpk ? (kpis.passengerRevenueExTax / kpis.totalRpk) * 100 : 0
@@ -57,12 +66,17 @@ const countryNames: Record<string, string> = {
   AE: 'UAE',
   US: 'United States',
   CA: 'Canada',
+  SG: 'Singapore',
+  TH: 'Thailand',
+  KE: 'Kenya',
+  ZA: 'South Africa',
+  QA: 'Qatar',
 }
 
 const stackMax = kpis.totalCollectedInclTax || 1
-
-/** Illustrative monthly LF index — Nov uses real network LF; others pending data. */
-const ILLUSTRATIVE_MONTHLY_LF = [0.81, 0.83, 0.84, 0.82, 0.85, 0.86, 0.87, 0.86, 0.85, 0.84, kpis.avgLoadFactor, 0.83]
+const periodLabel = d.meta.period
+  ? `${d.meta.period.start.slice(0, 7)} → ${d.meta.period.end.slice(0, 7)}`
+  : 'Jan 2024 – Dec 2025'
 
 function lfTone(lf: number): string {
   const p = Math.round(lf * 100)
@@ -74,19 +88,42 @@ function dayOf(f: FlightRow): number {
   return Number(f.date.slice(8, 10))
 }
 
+function monthHasData(year: number, monthName: string): boolean {
+  return (d.monthlySeries ?? []).some((m) => m.year === year && m.monthName === monthName)
+}
+
+function flightsInPeriod(year: number | null, month: string | null): FlightRow[] {
+  let rows = d.flights
+  if (year != null) rows = rows.filter((f) => f.year === year)
+  if (month) rows = rows.filter((f) => f.monthName === month)
+  return rows
+}
+
 function filteredFlights(): FlightRow[] {
   let rows = [...d.flights]
+
+  // Daily / weekly / monthly all scope to selected year + month when set
+  if (state.grain && state.year != null) {
+    rows = rows.filter((f) => f.year === state.year)
+  }
+  if (state.grain && state.month) {
+    rows = rows.filter((f) => f.monthName === state.month)
+  }
   if (state.grain === 'weekly' && state.week) {
     const wk = WEEKS.find((w) => w.id === state.week)
-    if (wk) rows = rows.filter((f) => {
-      const day = dayOf(f)
-      return day >= wk.start && day <= wk.end
-    })
-  }
-  if (state.grain === 'monthly' && state.month) {
-    if (state.month !== 'Nov') return []
+    if (wk) {
+      rows = rows.filter((f) => {
+        const day = dayOf(f)
+        return day >= wk.start && day <= wk.end
+      })
+    }
   }
   return rows
+}
+
+function limitRows<T>(rows: T[], limit = DETAIL_ROW_LIMIT): { rows: T[]; truncated: boolean } {
+  if (rows.length <= limit) return { rows, truncated: false }
+  return { rows: rows.slice(0, limit), truncated: true }
 }
 
 function aggregateFlights(flights: FlightRow[]) {
@@ -186,16 +223,18 @@ function carrierName(code: string, name?: string): string {
   return raw.replace(/\s*\(sample\)\s*/gi, '').trim()
 }
 
-function weekDateLabel(start: number, end: number): string {
-  const last = Math.min(end, 10)
-  if (start > 10) return 'No flights'
-  return `${start}–${last} Nov`
+function weekDateLabel(start: number, end: number, month?: string | null, year?: number | null): string {
+  const m = month ?? state.month ?? defaultMonth
+  const y = year ?? state.year ?? defaultYear
+  return `${start}–${end} ${m} ${y}`
 }
 
 function flightsInWeek(weekId: string): FlightRow[] {
   const wk = WEEKS.find((w) => w.id === weekId)
   if (!wk) return []
-  return d.flights.filter((f) => {
+  const year = state.year ?? defaultYear
+  const month = state.month ?? defaultMonth
+  return flightsInPeriod(year, month).filter((f) => {
     const day = dayOf(f)
     return day >= wk.start && day <= wk.end
   })
@@ -218,22 +257,24 @@ function weekSummaries() {
 /** Human-readable active filter for airline users. */
 function viewingContext(_flights?: FlightRow[]): { title: string; range: string } {
   if (!state.grain) {
-    return { title: 'All flights', range: '1–10 Nov 2026' }
+    return { title: 'All flights', range: periodLabel }
   }
+  const y = state.year ?? defaultYear
+  const m = state.month ?? defaultMonth
   if (state.grain === 'daily') {
-    return { title: 'Daily view', range: 'Each row is one flight date' }
+    return { title: 'Daily view', range: `${m} ${y} · each row is one flight date` }
   }
   if (state.grain === 'weekly') {
     const wk = WEEKS.find((w) => w.id === state.week)
-    if (!wk) return { title: 'Weekly view', range: 'Select a week below' }
+    if (!wk) return { title: 'Weekly view', range: `Select a week · ${m} ${y}` }
     return {
       title: wk.label,
-      range: weekDateLabel(wk.start, wk.end) + ' 2026',
+      range: weekDateLabel(wk.start, wk.end, m, y),
     }
   }
   return {
-    title: state.month ?? 'Monthly',
-    range: state.month === 'Nov' ? 'November 2026' : `${state.month} 2026`,
+    title: m,
+    range: `${m} ${y}`,
   }
 }
 
@@ -273,9 +314,9 @@ function renderShell() {
         </div>
       </div>
       <div class="top-filters">
-        <span class="filter-pill">Airline: All</span>
+        <span class="filter-pill">Airline: Air India</span>
         <span class="filter-pill">Currency: ${d.meta.currency}</span>
-        <span class="filter-pill">Nov 2026</span>
+        <span class="filter-pill">${periodLabel}</span>
       </div>
     </header>
 
@@ -314,13 +355,22 @@ function syncPeriodToTab() {
     state.grain = null
     state.week = null
     state.month = null
+    state.year = null
     return
   }
   if (state.grain && !allowed.includes(state.grain)) {
     state.grain = null
     state.week = null
     state.month = null
+    state.year = null
   }
+}
+
+function ensurePeriodDefaults() {
+  if (!state.grain) return
+  if (state.year == null) state.year = defaultYear
+  if (!state.month) state.month = defaultMonth
+  if (state.grain === 'weekly' && !state.week) state.week = 'wk1'
 }
 
 function bindClearButtons(root: ParentNode = document) {
@@ -329,9 +379,31 @@ function bindClearButtons(root: ParentNode = document) {
       state.grain = null
       state.week = null
       state.month = null
+      state.year = null
       render()
     })
   })
+}
+
+function yearMonthPickerHtml(helpVerb: string): string {
+  const year = state.year ?? defaultYear
+  return `
+    <div class="week-picker">
+      <p class="picker-help">Select year and month — ${helpVerb} update below</p>
+      <div class="period-sub month-strip" role="group" aria-label="Year">
+        ${YEARS.map(
+          (y) => `
+          <button type="button" class="chip sub${year === y ? ' is-active' : ''}" data-year="${y}">${y}</button>`,
+        ).join('')}
+      </div>
+      <div class="period-sub month-strip" role="group" aria-label="Month" style="margin-top:0.5rem">
+        ${MONTHS.map((m) => {
+          const has = monthHasData(year, m)
+          return `<button type="button" class="chip sub${state.month === m ? ' is-active' : ''}${has ? '' : ' is-empty'}"
+            data-month="${m}" ${has ? '' : 'disabled'}>${m}</button>`
+        }).join('')}
+      </div>
+    </div>`
 }
 
 function renderPeriodBar() {
@@ -343,6 +415,8 @@ function renderPeriodBar() {
     bar.innerHTML = ''
     return
   }
+
+  ensurePeriodDefaults()
 
   const helpVerb =
     state.tab === 'network' ? 'sectors and markets' : state.tab === 'forecast' ? 'outlook tables' : 'KPIs and flight table'
@@ -363,9 +437,14 @@ function renderPeriodBar() {
       </div>
     </div>
     ${
+      state.grain && (state.grain === 'daily' || state.grain === 'weekly' || state.grain === 'monthly')
+        ? yearMonthPickerHtml(helpVerb)
+        : ''
+    }
+    ${
       state.grain === 'weekly' && options.includes('weekly')
         ? `<div class="week-picker" role="group" aria-label="Select week">
-            <p class="picker-help">Select a week — ${helpVerb} update below</p>
+            <p class="picker-help">Select Wk-1 to Wk-4 — ${helpVerb} update below</p>
             <div class="week-cards">
               ${weekSummaries()
                 .map((w) => {
@@ -385,22 +464,8 @@ function renderPeriodBar() {
         : ''
     }
     ${
-      state.grain === 'monthly' && options.includes('monthly')
-        ? `<div class="week-picker">
-            <p class="picker-help">Select a month — ${helpVerb} update below</p>
-            <div class="period-sub month-strip" role="group" aria-label="Month">
-              ${MONTHS.map((m) => {
-                const has = m === 'Nov'
-                return `<button type="button" class="chip sub${state.month === m ? ' is-active' : ''}${has ? '' : ' is-empty'}"
-                  data-month="${m}" ${has ? '' : 'disabled'}>${m}</button>`
-              }).join('')}
-            </div>
-          </div>`
-        : ''
-    }
-    ${
       state.grain === 'daily' && options.includes('daily')
-        ? `<p class="picker-help">Daily view — each flight date is listed in the detail below.</p>`
+        ? `<p class="picker-help">Daily view — each flight date for ${state.month ?? defaultMonth} ${state.year ?? defaultYear} is listed below (capped for readability).</p>`
         : ''
     }
   `
@@ -408,12 +473,23 @@ function renderPeriodBar() {
   bar.querySelectorAll<HTMLButtonElement>('[data-grain]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.grain = btn.dataset.grain as PeriodGrain
+      state.year = defaultYear
+      state.month = defaultMonth
       state.week = state.grain === 'weekly' ? 'wk1' : null
-      state.month = state.grain === 'monthly' ? 'Nov' : null
       render()
     })
   })
   bindClearButtons(bar)
+  bar.querySelectorAll<HTMLButtonElement>('[data-year]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.year = Number(btn.dataset.year)
+      if (state.month && !monthHasData(state.year, state.month)) {
+        const first = MONTHS.find((m) => monthHasData(state.year!, m))
+        state.month = first ?? defaultMonth
+      }
+      render()
+    })
+  })
   bar.querySelectorAll<HTMLButtonElement>('[data-week]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.week = btn.dataset.week ?? null
@@ -471,6 +547,67 @@ function sectorsFromFlights(flights: FlightRow[]) {
     .sort((a, b) => b.revenue - a.revenue)
 }
 
+/** O&D endpoints for display (BOM-DOH-LHR → BOM–LHR). */
+function odEndpoints(market: string): string {
+  const parts = market.split('-').filter(Boolean)
+  if (parts.length < 2) return market
+  return `${parts[0]}–${parts[parts.length - 1]}`
+}
+
+/** Connecting hub from flight field or itinerary path. */
+function odConnectingPoint(market: string, connectingPoint?: string | null): string {
+  if (connectingPoint) return connectingPoint
+  const parts = market.split('-').filter(Boolean)
+  if (parts.length >= 3) return parts.slice(1, -1).join('-')
+  return 'Nonstop'
+}
+
+/** O&D roll-up from filtered flights (full journey grain, not operated sector). */
+function odMarketsFromFlights(flights: FlightRow[]) {
+  type OdAgg = {
+    market: string
+    itinerary: string
+    connectingPoint: string
+    revenue: number
+    pax: number
+    rpk: number
+    flights: number
+  }
+  const map = new Map<string, OdAgg>()
+  for (const f of flights) {
+    const itinerary = f.odMarket || `${f.origin}-${f.destination}`
+    const connectingPoint = odConnectingPoint(itinerary, f.connectingPoint)
+    const market = odEndpoints(itinerary)
+    const key = `${market}|${connectingPoint}|${itinerary}`
+    const row = map.get(key) ?? {
+      market,
+      itinerary,
+      connectingPoint,
+      revenue: 0,
+      pax: 0,
+      rpk: 0,
+      flights: 0,
+    }
+    row.revenue += f.sampleRevenue ?? 0
+    row.pax += f.sampleCoupons ?? 0
+    row.rpk += f.rpk
+    row.flights += 1
+    map.set(key, row)
+  }
+  return [...map.values()]
+    .map((o) => ({
+      ...o,
+      avgFare: o.pax ? o.revenue / o.pax : 0,
+      yieldC: o.rpk ? (o.revenue / o.rpk) * 100 : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
+}
+
+function shareBar(value: number, max: number): string {
+  const width = max > 0 ? Math.max(4, (value / max) * 100) : 0
+  return `<span class="share-bar" aria-hidden="true"><span class="share-bar-fill" style="--w:${width}%"></span></span>`
+}
+
 function viewOverview(): string {
   const weak = [...d.flights].sort((a, b) => a.loadFactor - b.loadFactor)[0]
   const strongRev = [...d.routes].sort((a, b) => b.revenue - a.revenue)[0]
@@ -479,7 +616,7 @@ function viewOverview(): string {
     <section class="page-head">
       <div>
         <h1>Commercial overview</h1>
-        <p>Network revenue, traffic and load performance · 1–10 Nov 2026</p>
+        <p>Air India network revenue, traffic and load · ${periodLabel} · ${number(kpis.couponRecords)} coupon sample</p>
       </div>
     </section>
 
@@ -584,14 +721,19 @@ function viewNetwork(): string {
   const empty = flights.length === 0
   const agg = aggregateFlights(flights)
   const sectors = sectorsFromFlights(flights)
+  const odMarkets = odMarketsFromFlights(flights)
   const topSector = sectors[0]
+  const topOd = odMarkets[0]
   const yieldPeriod = agg.rpk ? (agg.sampleRev / agg.rpk) * 100 : 0
+  const sectorRevMax = sectors[0]?.revenue ?? 0
+  const odRevMax = odMarkets[0]?.revenue ?? 0
+  const ctx = viewingContext()
 
   return `
     <section class="page-head">
       <div>
         <h1>Network performance</h1>
-        <p>Sectors and markets for the selected period.</p>
+        <p>Operated sectors and full-journey O&amp;D for the selected period.</p>
       </div>
     </section>
 
@@ -615,9 +757,9 @@ function viewNetwork(): string {
         <span class="hint">${empty || !topSector ? '—' : money(topSector.revenue)}</span>
       </div>
       <div class="kpi">
-        <span class="label">Sectors</span>
-        <span class="value">${empty ? '—' : number(sectors.length)}</span>
-        <span class="hint">${empty ? '—' : `${number(flights.length)} flights`}</span>
+        <span class="label">Top O&amp;D</span>
+        <span class="value">${empty || !topOd ? '—' : topOd.market}</span>
+        <span class="hint">${empty || !topOd ? '—' : `${topOd.connectingPoint === 'Nonstop' ? 'Nonstop' : `via ${topOd.connectingPoint}`} · ${money(topOd.revenue)}`}</span>
       </div>
       <div class="kpi">
         <span class="label">Yield</span>
@@ -627,31 +769,16 @@ function viewNetwork(): string {
     </section>
 
     <section class="panel">
-      <h2>Sector revenue</h2>
-      <p class="sub">By flight sector · selected period</p>
-      ${
-        empty
-          ? '<p class="note-inline">No sectors in range.</p>'
-          : horizontalBars(
-              sectors.map((r) => ({
-                label: r.route,
-                value: r.revenue,
-                secondary: `LF ${pct(r.lf)} · avg ${money(r.avgFare, true)}`,
-              })),
-            )
-      }
-    </section>
-
-    <section class="panel">
       <h2>Sector scorecard</h2>
-      <p class="sub">${viewingContext().title} · ${viewingContext().range}</p>
+      <p class="sub">Operated flight legs · ${ctx.title} · ${ctx.range}</p>
       <div class="table-wrap">
-        <table>
+        <table class="network-table">
           <thead>
             <tr>
               <th>Sector</th>
               <th>Flights</th>
               <th>Revenue</th>
+              <th class="share-col">Share</th>
               <th>Flown</th>
               <th>LF</th>
               <th>ASK</th>
@@ -661,15 +788,19 @@ function viewNetwork(): string {
           <tbody>
             ${
               empty
-                ? `<tr><td colspan="7">No sectors in range.</td></tr>`
+                ? `<tr><td colspan="8">No sectors in range.</td></tr>`
                 : sectors
                     .map((s) => {
                       const tone = lfTone(s.lf)
                       return `
                 <tr>
-                  <td><strong>${s.route}</strong></td>
+                  <td>
+                    <strong>${s.route}</strong>
+                    <div class="cell-meta">avg ${money(s.avgFare, true)}</div>
+                  </td>
                   <td class="num">${number(s.count)}</td>
                   <td class="num">${money(s.revenue)}</td>
+                  <td class="share-col">${shareBar(s.revenue, sectorRevMax)}</td>
                   <td class="num">${number(s.flown)}</td>
                   <td><span class="lf-pill ${tone}">${Math.round(s.lf * 100)}%</span></td>
                   <td class="num">${compactNumber(s.ask)}</td>
@@ -683,23 +814,53 @@ function viewNetwork(): string {
       </div>
     </section>
 
-    ${
-      !state.grain
-        ? `<section class="panel" style="margin-top:1rem">
-      <h2>O&amp;D markets</h2>
-      <p class="sub">Full network itinerary view</p>
-      ${horizontalBars(
-        [...d.odMarkets]
-          .sort((a, b) => b.revenue - a.revenue)
-          .map((o) => ({
-            label: o.market,
-            value: o.revenue,
-            secondary: `${o.pax} pax · avg ${money(o.avgFare ?? 0)}`,
-          })),
-      )}
-    </section>`
-        : ''
-    }
+    <section class="panel" style="margin-top:1rem">
+      <h2>O&amp;D scorecard</h2>
+      <p class="sub">Full journey view · connecting point vs nonstop · ${ctx.range}</p>
+      <div class="table-wrap">
+        <table class="network-table">
+          <thead>
+            <tr>
+              <th>O&amp;D market</th>
+              <th>Connecting point</th>
+              <th>Revenue</th>
+              <th class="share-col">Share</th>
+              <th>Pax</th>
+              <th>RPK</th>
+              <th>Yield</th>
+              <th>Avg fare</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              empty
+                ? `<tr><td colspan="8">No O&amp;D markets in range.</td></tr>`
+                : odMarkets
+                    .map((o) => {
+                      const isConnect = o.connectingPoint !== 'Nonstop'
+                      return `
+                <tr>
+                  <td>
+                    <strong>${o.market}</strong>
+                    <div class="cell-meta">${o.itinerary}${isConnect ? '' : ' · direct'}</div>
+                  </td>
+                  <td>
+                    <span class="connect-pill ${isConnect ? 'is-connect' : 'is-direct'}">${o.connectingPoint}</span>
+                  </td>
+                  <td class="num">${money(o.revenue)}</td>
+                  <td class="share-col">${shareBar(o.revenue, odRevMax)}</td>
+                  <td class="num">${number(o.pax)}</td>
+                  <td class="num">${compactNumber(o.rpk)}</td>
+                  <td class="num">${o.yieldC ? `${o.yieldC.toFixed(2)}¢` : '—'}</td>
+                  <td class="num">${money(o.avgFare, true)}</td>
+                </tr>`
+                    })
+                    .join('')
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
   `
 }
 
@@ -803,13 +964,17 @@ function viewCapacity(): string {
         ${
           empty
             ? '<p class="note-inline">No flights in range.</p>'
-            : loadMeter(
-                source.map((f) => ({
-                  flightNumber: f.flightNumber,
-                  loadFactor: f.loadFactor,
-                  route: `${f.origin} → ${f.destination} · ${f.date ?? ''} · ${number(f.flownPax)}/${number(f.operatedSeats)}`,
-                })),
-              )
+            : (() => {
+                const sorted = [...source].sort((a, b) => a.loadFactor - b.loadFactor)
+                const limited = limitRows(sorted, 40)
+                return `${limited.truncated ? `<p class="note-inline">Lowest-LF 40 of ${source.length} flights shown.</p>` : ''}${loadMeter(
+                  limited.rows.map((f) => ({
+                    flightNumber: f.flightNumber,
+                    loadFactor: f.loadFactor,
+                    route: `${f.origin} → ${f.destination} · ${f.date ?? ''} · ${number(f.flownPax)}/${number(f.operatedSeats)}`,
+                  })),
+                )}`
+              })()
         }
       </article>
       <article class="panel">
@@ -864,35 +1029,44 @@ function viewCapacity(): string {
     </section>
 
     ${
-      state.grain === 'monthly'
-        ? `<section class="panel">
+      state.grain === 'monthly' || !state.grain
+        ? (() => {
+            const year = state.grain === 'monthly' ? (state.year ?? defaultYear) : null
+            const series = (d.monthlySeries ?? []).filter((m) => (year == null ? true : m.year === year))
+            return `<section class="panel">
       <h2>Load factor by month</h2>
-      <p class="sub">Jan–Dec</p>
+      <p class="sub">${year ?? 'Jan 2024 – Dec 2025'} · flown capacity</p>
       ${verticalBars(
-        MONTHS.map((m, i) => ({
-          label: m,
-          value: ILLUSTRATIVE_MONTHLY_LF[i],
-          highlight: m === state.month,
-          muted: m !== 'Nov',
+        series.map((m) => ({
+          label: year == null ? `${m.monthName} '${String(m.year).slice(2)}` : m.monthName,
+          value: m.loadFactor,
+          highlight: state.month != null && m.monthName === state.month && m.year === (state.year ?? m.year),
+          muted: state.month != null && !(m.monthName === state.month && m.year === (state.year ?? m.year)),
         })),
       )}
     </section>`
+          })()
         : ''
     }
 
     <section class="panel">
       <h2>Performance by flight no / route</h2>
       <p class="sub">${viewingContext(source).title} · ${viewingContext(source).range}</p>
+      ${(() => {
+        const limited = limitRows(empty ? [] : flights)
+        return `
+      ${limited.truncated ? `<p class="note-inline">Showing first ${DETAIL_ROW_LIMIT} of ${flights.length} flights. Narrow with Daily / Weekly / Monthly.</p>` : ''}
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Flight</th>
               <th>Route</th>
+              <th>Dir</th>
               <th>Date</th>
-              <th>Aircraft</th>
+              <th>Region</th>
+              <th>Journey</th>
               <th>Operated</th>
-              <th>Booked</th>
               <th>Flown</th>
               <th>LF</th>
               <th>ASK</th>
@@ -900,27 +1074,33 @@ function viewCapacity(): string {
             </tr>
           </thead>
           <tbody>
-            ${(empty ? [] : flights)
+            ${limited.rows
               .map((f) => {
                 const tone = lfTone(f.loadFactor)
+                const connect =
+                  f.journeyType === 'Connecting' && f.connectingPoint
+                    ? ` via ${f.connectingPoint}`
+                    : ''
                 return `
                 <tr>
                   <td><strong>${f.flightNumber}</strong><div class="cell-sub">${carrierName(f.airline, f.airlineName)}</div></td>
-                  <td>${f.origin}—${f.destination}</td>
+                  <td>${f.origin}—${f.destination}<div class="cell-sub">${f.odMarket ?? ''}${connect}</div></td>
+                  <td>${f.direction ?? '—'}</td>
                   <td>${f.date ?? '—'}</td>
-                  <td>${f.aircraft}</td>
+                  <td>${f.region ?? '—'}</td>
+                  <td>${f.journeyType ?? '—'}</td>
                   <td class="num">${number(f.operatedSeats)}</td>
-                  <td class="num">${number(f.bookedSeats)}</td>
                   <td class="num">${number(f.flownPax)}</td>
                   <td><span class="lf-pill ${tone}">${Math.round(f.loadFactor * 100)}%</span></td>
                   <td class="num">${compactNumber(f.ask)}</td>
                   <td class="num">${compactNumber(f.rpk)}</td>
                 </tr>`
               })
-              .join('') || `<tr><td colspan="10">No flights in range.</td></tr>`}
+              .join('') || `<tr><td colspan="11">No flights in range.</td></tr>`}
           </tbody>
         </table>
-      </div>
+      </div>`
+      })()}
     </section>
   `
 }
@@ -930,7 +1110,7 @@ function viewRevenue(): string {
     <section class="page-head">
       <div>
         <h1>Revenue &amp; distribution</h1>
-        <p>Revenue mix, channels and point of sale.</p>
+        <p>Air India revenue mix, cabins, regions, channels and point of sale · ${periodLabel}</p>
       </div>
     </section>
 
@@ -999,8 +1179,8 @@ function viewRevenue(): string {
 
     <section class="grid">
       <article class="panel">
-        <h2>Cabin &amp; RBD</h2>
-        <p class="sub">Fare class mix</p>
+        <h2>Cabin mix</h2>
+        <p class="sub">First · Business · Premium Economy · Economy</p>
         ${donut(
           d.cabins.map((c) => ({ label: c.cabin, value: c.revenue })),
           'pax rev',
@@ -1008,9 +1188,55 @@ function viewRevenue(): string {
         )}
         <div class="table-wrap tight" style="margin-top:1rem">
           <table>
+            <thead><tr><th>Cabin</th><th>PAX</th><th>Revenue</th><th>Avg</th></tr></thead>
+            <tbody>
+              ${d.cabins
+                .map(
+                  (c) => `
+                <tr>
+                  <td><strong>${c.cabin}</strong></td>
+                  <td class="num">${number(c.pax)}</td>
+                  <td class="num">${money(c.revenue)}</td>
+                  <td class="num">${money(c.avgFare ?? 0, true)}</td>
+                </tr>`,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="panel">
+        <h2>Region &amp; journey</h2>
+        <p class="sub">Asia, Africa, GCC and more · Direct vs Connecting</p>
+        ${horizontalBars(
+          (d.regions ?? []).map((r) => ({
+            label: r.region,
+            value: r.revenue,
+            secondary: pct(r.share ?? 0),
+          })),
+        )}
+        <div style="margin-top:1.25rem">
+          ${horizontalBars(
+            (d.journeyTypes ?? []).map((j) => ({
+              label: j.type,
+              value: j.revenue,
+              secondary: `${number(j.pax)} pax · ${pct(j.share ?? 0)}`,
+            })),
+          )}
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>RBD</h2>
+        <p class="sub">Top booking classes</p>
+        <div class="table-wrap tight">
+          <table>
             <thead><tr><th>RBD</th><th>PAX</th><th>Revenue</th><th>Avg</th></tr></thead>
             <tbody>
               ${d.rbds
+                .slice(0, 12)
                 .map(
                   (r) => `
                 <tr>
@@ -1046,6 +1272,21 @@ function viewRevenue(): string {
         </div>
       </article>
     </section>
+
+    <section class="panel">
+      <h2>O&amp;D examples — Direct vs Connecting</h2>
+      <p class="sub">e.g. BOM-LHR Direct · BOM-DOH-LHR Connecting (DOH)</p>
+      ${horizontalBars(
+        [...d.odMarkets]
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 10)
+          .map((o) => ({
+            label: o.market,
+            value: o.revenue,
+            secondary: `${o.pax} coupons · avg ${money(o.avgFare ?? 0)}`,
+          })),
+      )}
+    </section>
   `
 }
 
@@ -1055,12 +1296,17 @@ function viewForecast(): string {
   const agg = aggregateFlights(flights)
   const markets = sectorsFromFlights(flights)
   const watch = [...markets].sort((a, b) => a.lf - b.lf).slice(0, 3)
+  const year = state.year ?? defaultYear
+  const series = (d.monthlySeries ?? []).filter((m) => m.year === year)
+  const maxRev = Math.max(...series.map((m) => m.sampleRevenue), 1)
+  const lag = d.bookingLag ?? []
+  const lagMax = Math.max(...lag.map((b) => b.pax), 1)
 
   return `
     <section class="page-head">
       <div>
         <h1>Forecasting</h1>
-        <p>Forward demand, bookings and capacity outlook.</p>
+        <p>Ticketed date vs flown / departure date · capacity outlook for Air India.</p>
       </div>
     </section>
 
@@ -1074,14 +1320,14 @@ function viewForecast(): string {
 
     <section class="kpi-strip light four">
       <div class="kpi">
-        <span class="label">Next 6-month revenue</span>
-        <span class="value">—</span>
-        <span class="hint">Outlook</span>
+        <span class="label">Sample revenue (${year})</span>
+        <span class="value">${money(series.reduce((s, m) => s + m.sampleRevenue, 0))}</span>
+        <span class="hint">Coupon sample · ticketed &amp; flown</span>
       </div>
       <div class="kpi">
-        <span class="label">Forward bookings</span>
-        <span class="value">—</span>
-        <span class="hint">Scheduled flights</span>
+        <span class="label">Flights in view</span>
+        <span class="value">${empty ? '—' : number(flights.length)}</span>
+        <span class="hint">Selected period</span>
       </div>
       <div class="kpi">
         <span class="label">Planned ASK</span>
@@ -1091,26 +1337,42 @@ function viewForecast(): string {
       <div class="kpi accent">
         <span class="label">Expected LF</span>
         <span class="value">${empty ? '—' : pct(agg.lf)}</span>
-        <span class="hint">Based on current flown / operated</span>
+        <span class="hint">Flown / operated seats</span>
       </div>
     </section>
 
     <section class="grid">
       <article class="panel">
-        <h2>Revenue outlook</h2>
-        <p class="sub">${state.grain === 'monthly' ? 'Monthly horizon' : 'Forward months'}</p>
+        <h2>Monthly revenue (${year})</h2>
+        <p class="sub">Sample coupon revenue by flown / departure month</p>
         ${verticalBars(
-          [
-            { label: 'Sep', value: 0.72, muted: true },
-            { label: 'Oct', value: 0.78, muted: true },
-            { label: 'Nov', value: 1, highlight: state.month === 'Nov' || !state.grain },
-            { label: 'Dec', value: 0.85, muted: true },
-            { label: 'Jan', value: 0.88, muted: true },
-            { label: 'Feb', value: 0.8, muted: true },
-          ],
-          { format: () => '—' },
+          series.map((m) => ({
+            label: m.monthName,
+            value: m.sampleRevenue / maxRev,
+            highlight: m.monthName === state.month,
+            muted: state.month != null && m.monthName !== state.month,
+          })),
+          { format: (n) => money(n * maxRev), unit: '' },
         )}
       </article>
+      <article class="panel">
+        <h2>Booking lead time</h2>
+        <p class="sub">Ticket_Issue_Date → Flown_Departure_Date</p>
+        ${horizontalBars(
+          lag.map((b) => ({
+            label: b.bucket,
+            value: b.pax,
+            secondary: pct(b.pax / lagMax),
+          })),
+        )}
+        <ul class="fact-list" style="margin-top:1rem">
+          <li><b>Ticketed date:</b> Ticket_Issue_Date</li>
+          <li><b>Flown / departure:</b> Flown_Departure_Date</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
       <article class="panel">
         <h2>Watchlist</h2>
         <p class="sub">Markets to review · selected period</p>
@@ -1130,6 +1392,18 @@ function viewForecast(): string {
                   .join('')
           }
         </div>
+      </article>
+      <article class="panel">
+        <h2>Load outlook (${year})</h2>
+        <p class="sub">Monthly LF from capacity grain</p>
+        ${verticalBars(
+          series.map((m) => ({
+            label: m.monthName,
+            value: m.loadFactor,
+            highlight: m.monthName === state.month,
+            muted: state.month != null && m.monthName !== state.month,
+          })),
+        )}
       </article>
     </section>
 
@@ -1195,7 +1469,8 @@ function renderView() {
     row.addEventListener('click', () => {
       state.grain = 'weekly'
       state.week = id
-      state.month = null
+      if (state.year == null) state.year = defaultYear
+      if (!state.month) state.month = defaultMonth
       render()
     })
   })

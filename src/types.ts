@@ -34,12 +34,41 @@ export type PosRow = {
   share?: number
 }
 export type OdRow = { market: string; pax: number; revenue: number; avgFare?: number }
+export type RegionRow = {
+  region: string
+  pax: number
+  revenue: number
+  avgFare?: number
+  share?: number
+}
+export type JourneyTypeRow = {
+  type: string
+  pax: number
+  revenue: number
+  avgFare?: number
+  share?: number
+}
+export type MonthlySeriesRow = {
+  year: number
+  month: number
+  monthName: string
+  label: string
+  flights: number
+  operatedSeats: number
+  flownPax: number
+  ask: number
+  rpk: number
+  loadFactor: number
+  sampleRevenue: number
+}
+export type BookingLagRow = { bucket: string; pax: number }
 
 export type FlightRow = {
   flightId: string
   airline: string
   airlineName?: string
   date: string | null
+  flownDepartureDate?: string | null
   flightNumber: string
   origin: string
   destination: string
@@ -55,6 +84,15 @@ export type FlightRow = {
   loadFactor: number
   ask: number
   rpk: number
+  region?: string
+  journeyType?: string
+  connectingPoint?: string | null
+  odMarket?: string
+  weekLabel?: string
+  year?: number
+  month?: number
+  monthName?: string
+  direction?: string
   sampleCoupons?: number
   sampleRevenue?: number
   sampleAncillary?: number
@@ -71,6 +109,7 @@ export type PrototypeData = {
     note: string
     currency: string
     source: string
+    period?: { start: string; end: string }
     grain?: {
       coupon: string
       capacity: string
@@ -100,5 +139,9 @@ export type PrototypeData = {
   rbds: RbdRow[]
   pointOfSale: PosRow[]
   odMarkets: OdRow[]
+  regions?: RegionRow[]
+  journeyTypes?: JourneyTypeRow[]
+  monthlySeries?: MonthlySeriesRow[]
+  bookingLag?: BookingLagRow[]
   flights: FlightRow[]
 }

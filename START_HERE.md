@@ -75,8 +75,14 @@ Copy/paste these into Cursor chat:
 
 ## Important data notes
 
-- This is **synthetic prototype data** (fictional sample airlines/values).
-- **Coupon sample** = 100 rows (10 per flight) for fare / channel / ancillary mix.
+- This is **synthetic prototype data** (fictional Air India values).
+- **Coupon sample** = 50,000 rows (10 per flight) for fare / channel / ancillary mix.
+- **Airline** = Air India only, with inbound (I/B) and outbound (O/B) flight numbers.
+- **Period** = January 2024 – December 2025, with Daily / Wk-1–Wk-4 / Monthly views.
+- **Cabins** = First, Business, Premium Economy, Economy.
+- **Regions** = Asia, Africa, GCC, Europe, Americas, Domestic India.
+- **Journey** = Direct (e.g. BOM-LHR) and Connecting (e.g. BOM-DOH-LHR, connecting point DOH).
+- **Dates** = `Ticket_Issue_Date` (ticketed) and `Flown_Departure_Date` (flown / departure) for forecasting.
 - **Flight capacity** = full plane totals (use this for load factor / ASK / RPK).
 - Do **not** treat 10 sample coupons as total passengers on a flight.
 

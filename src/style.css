@@ -1240,6 +1240,57 @@ td.num {
 .lf-pill.mid { background: rgba(14, 124, 123, 0.14); color: var(--teal-deep); }
 .lf-pill.low { background: rgba(184, 92, 56, 0.14); color: var(--copper); }
 
+.network-table .cell-meta {
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.network-table .share-col {
+  min-width: 7rem;
+  width: 8.5rem;
+}
+
+.share-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(10, 27, 46, 0.08);
+  overflow: hidden;
+}
+
+.share-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--teal);
+  animation: grow 0.9s 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.connect-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.6rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.connect-pill.is-connect {
+  background: rgba(26, 79, 107, 0.12);
+  color: var(--steel);
+}
+
+.connect-pill.is-direct {
+  background: rgba(92, 107, 122, 0.12);
+  color: var(--muted);
+}
+
 .footer-note {
   margin-top: 1.25rem;
   color: var(--muted);
