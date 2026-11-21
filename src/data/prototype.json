@@ -1,0 +1,743 @@
+{
+  "meta": {
+    "title": "SkyTrixx Airline Commercial Analytics",
+    "note": "Synthetic prototype data \u2014 100 coupon records across 10 flight sectors (USD).",
+    "currency": "USD",
+    "source": "SkyTrixx_Airline_Commercial_Analytics_Prototype.xlsx",
+    "grain": {
+      "coupon": "One row = one flown passenger coupon on one flight leg.",
+      "capacity": "One row = one operated flight sector/date (full plane totals).",
+      "warning": "Coupon sheet is a 10-row sample per flight. Capacity Flown_PAX is the full flight total \u2014 do not treat sample coupon count as total passengers."
+    },
+    "airlineNames": {
+      "AI": "Air India (sample)",
+      "6E": "IndiGo (sample)",
+      "SG": "SpiceJet (sample)",
+      "UK": "Vistara (sample)"
+    }
+  },
+  "kpis": {
+    "couponRecords": 100,
+    "flightSectors": 10,
+    "passengerRevenueExTax": 28603.0,
+    "flownTicketRevenue": 26231.0,
+    "ancillaryRevenue": 2372.0,
+    "taxAmount": 3014.0,
+    "totalCollectedInclTax": 31617.0,
+    "operatedSeats": 1951,
+    "flownPax": 1645,
+    "totalAsk": 6107530,
+    "totalRpk": 5076890,
+    "avgLoadFactor": 0.8454
+  },
+  "airlines": [
+    {
+      "code": "6E",
+      "pax": 30,
+      "revenue": 5790.0,
+      "ancillary": 647.0,
+      "flownTicket": 5143.0,
+      "name": "IndiGo (sample)",
+      "avgFare": 193.0,
+      "ancillaryShare": 0.1117
+    },
+    {
+      "code": "AI",
+      "pax": 30,
+      "revenue": 15634.0,
+      "ancillary": 804.0,
+      "flownTicket": 14830.0,
+      "name": "Air India (sample)",
+      "avgFare": 521.13,
+      "ancillaryShare": 0.0514
+    },
+    {
+      "code": "SG",
+      "pax": 20,
+      "revenue": 4564.0,
+      "ancillary": 536.0,
+      "flownTicket": 4028.0,
+      "name": "SpiceJet (sample)",
+      "avgFare": 228.2,
+      "ancillaryShare": 0.1174
+    },
+    {
+      "code": "UK",
+      "pax": 20,
+      "revenue": 2615.0,
+      "ancillary": 385.0,
+      "flownTicket": 2230.0,
+      "name": "Vistara (sample)",
+      "avgFare": 130.75,
+      "ancillaryShare": 0.1472
+    }
+  ],
+  "routes": [
+    {
+      "route": "BOM-LHR",
+      "pax": 10,
+      "revenue": 5790.0,
+      "avgFare": 579.0
+    },
+    {
+      "route": "LHR-BOM",
+      "pax": 10,
+      "revenue": 5787.0,
+      "avgFare": 578.7
+    },
+    {
+      "route": "BOM-DEL",
+      "pax": 20,
+      "revenue": 5366.0,
+      "avgFare": 268.3
+    },
+    {
+      "route": "BOM-DXB",
+      "pax": 10,
+      "revenue": 2282.0,
+      "avgFare": 228.2
+    },
+    {
+      "route": "DXB-BOM",
+      "pax": 10,
+      "revenue": 2282.0,
+      "avgFare": 228.2
+    },
+    {
+      "route": "DXB-DEL",
+      "pax": 10,
+      "revenue": 2205.0,
+      "avgFare": 220.5
+    },
+    {
+      "route": "DEL-DXB",
+      "pax": 10,
+      "revenue": 2202.0,
+      "avgFare": 220.2
+    },
+    {
+      "route": "BLR-BOM",
+      "pax": 10,
+      "revenue": 1383.0,
+      "avgFare": 138.3
+    },
+    {
+      "route": "DEL-BOM",
+      "pax": 10,
+      "revenue": 1306.0,
+      "avgFare": 130.6
+    }
+  ],
+  "channels": [
+    {
+      "channel": "GDS",
+      "pax": 20,
+      "revenue": 6075.0,
+      "avgFare": 303.75,
+      "share": 0.2124
+    },
+    {
+      "channel": "NDC",
+      "pax": 20,
+      "revenue": 6014.0,
+      "avgFare": 300.7,
+      "share": 0.2103
+    },
+    {
+      "channel": "OTA",
+      "pax": 20,
+      "revenue": 5618.0,
+      "avgFare": 280.9,
+      "share": 0.1964
+    },
+    {
+      "channel": "Travel Agent",
+      "pax": 20,
+      "revenue": 5612.0,
+      "avgFare": 280.6,
+      "share": 0.1962
+    },
+    {
+      "channel": "Direct",
+      "pax": 20,
+      "revenue": 5284.0,
+      "avgFare": 264.2,
+      "share": 0.1847
+    }
+  ],
+  "ancillaries": [
+    {
+      "type": "Meal",
+      "count": 20,
+      "revenue": 759.0,
+      "avg": 37.95
+    },
+    {
+      "type": "Baggage",
+      "count": 20,
+      "revenue": 735.0,
+      "avg": 36.75
+    },
+    {
+      "type": "Upgrade",
+      "count": 20,
+      "revenue": 445.0,
+      "avg": 22.25
+    },
+    {
+      "type": "Seat Selection",
+      "count": 20,
+      "revenue": 433.0,
+      "avg": 21.65
+    },
+    {
+      "type": "None",
+      "count": 20,
+      "revenue": 0.0,
+      "avg": 0.0
+    }
+  ],
+  "cabins": [
+    {
+      "cabin": "Business",
+      "pax": 10,
+      "revenue": 4057.0,
+      "avgFare": 405.7,
+      "share": 0.1418
+    },
+    {
+      "cabin": "Economy",
+      "pax": 90,
+      "revenue": 24546.0,
+      "avgFare": 272.73,
+      "share": 0.8582
+    }
+  ],
+  "rbds": [
+    {
+      "rbd": "B",
+      "pax": 10,
+      "revenue": 3415.0,
+      "avgFare": 341.5
+    },
+    {
+      "rbd": "V",
+      "pax": 10,
+      "revenue": 3361.0,
+      "avgFare": 336.1
+    },
+    {
+      "rbd": "Q",
+      "pax": 10,
+      "revenue": 2875.0,
+      "avgFare": 287.5
+    },
+    {
+      "rbd": "J",
+      "pax": 10,
+      "revenue": 2868.0,
+      "avgFare": 286.8
+    },
+    {
+      "rbd": "K",
+      "pax": 10,
+      "revenue": 2744.0,
+      "avgFare": 274.4
+    },
+    {
+      "rbd": "H",
+      "pax": 10,
+      "revenue": 2743.0,
+      "avgFare": 274.3
+    },
+    {
+      "rbd": "L",
+      "pax": 10,
+      "revenue": 2681.0,
+      "avgFare": 268.1
+    },
+    {
+      "rbd": "M",
+      "pax": 10,
+      "revenue": 2660.0,
+      "avgFare": 266.0
+    },
+    {
+      "rbd": "S",
+      "pax": 10,
+      "revenue": 2653.0,
+      "avgFare": 265.3
+    },
+    {
+      "rbd": "Y",
+      "pax": 10,
+      "revenue": 2603.0,
+      "avgFare": 260.3
+    }
+  ],
+  "pointOfSale": [
+    {
+      "country": "GB",
+      "pax": 20,
+      "revenue": 6075.0,
+      "avgFare": 303.75,
+      "share": 0.2124
+    },
+    {
+      "country": "CA",
+      "pax": 20,
+      "revenue": 6014.0,
+      "avgFare": 300.7,
+      "share": 0.2103
+    },
+    {
+      "country": "AE",
+      "pax": 20,
+      "revenue": 5618.0,
+      "avgFare": 280.9,
+      "share": 0.1964
+    },
+    {
+      "country": "US",
+      "pax": 20,
+      "revenue": 5612.0,
+      "avgFare": 280.6,
+      "share": 0.1962
+    },
+    {
+      "country": "IN",
+      "pax": 20,
+      "revenue": 5284.0,
+      "avgFare": 264.2,
+      "share": 0.1847
+    }
+  ],
+  "odMarkets": [
+    {
+      "market": "BOM-DOH-LHR",
+      "pax": 10,
+      "revenue": 5790.0,
+      "avgFare": 579.0
+    },
+    {
+      "market": "LHR-DOH-BOM",
+      "pax": 10,
+      "revenue": 5787.0,
+      "avgFare": 578.7
+    },
+    {
+      "market": "BOM-DEL",
+      "pax": 20,
+      "revenue": 5366.0,
+      "avgFare": 268.3
+    },
+    {
+      "market": "BOM-DXB",
+      "pax": 10,
+      "revenue": 2282.0,
+      "avgFare": 228.2
+    },
+    {
+      "market": "DXB-BOM",
+      "pax": 10,
+      "revenue": 2282.0,
+      "avgFare": 228.2
+    },
+    {
+      "market": "DXB-DEL",
+      "pax": 10,
+      "revenue": 2205.0,
+      "avgFare": 220.5
+    },
+    {
+      "market": "DEL-DXB",
+      "pax": 10,
+      "revenue": 2202.0,
+      "avgFare": 220.2
+    },
+    {
+      "market": "BLR-BOM",
+      "pax": 10,
+      "revenue": 1383.0,
+      "avgFare": 138.3
+    },
+    {
+      "market": "DEL-BOM",
+      "pax": 10,
+      "revenue": 1306.0,
+      "avgFare": 130.6
+    }
+  ],
+  "flights": [
+    {
+      "flightId": "F001",
+      "airline": "AI",
+      "airlineName": "Air India (sample)",
+      "date": "2026-11-01",
+      "flightNumber": "AI127",
+      "origin": "BOM",
+      "destination": "LHR",
+      "sector": "BOM-LHR",
+      "aircraft": "B787-8",
+      "distanceKm": 7600,
+      "scheduledSeats": 256,
+      "operatedSeats": 250,
+      "blockedSeats": 12,
+      "sellableSeats": 238,
+      "bookedSeats": 225,
+      "flownPax": 200,
+      "loadFactor": 0.8,
+      "ask": 1900000,
+      "rpk": 1520000,
+      "sampleCoupons": 10,
+      "sampleRevenue": 5790.0,
+      "sampleAncillary": 268.0,
+      "sampleFlownTicket": 5522.0,
+      "sampleTax": 563.0,
+      "sampleAvgFare": 579.0,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "GDS": 2,
+        "OTA": 2,
+        "Travel Agent": 2,
+        "NDC": 2,
+        "Direct": 2
+      }
+    },
+    {
+      "flightId": "F002",
+      "airline": "AI",
+      "airlineName": "Air India (sample)",
+      "date": "2026-11-02",
+      "flightNumber": "AI128",
+      "origin": "LHR",
+      "destination": "BOM",
+      "sector": "LHR-BOM",
+      "aircraft": "B787-8",
+      "distanceKm": 7600,
+      "scheduledSeats": 256,
+      "operatedSeats": 256,
+      "blockedSeats": 8,
+      "sellableSeats": 248,
+      "bookedSeats": 237,
+      "flownPax": 214,
+      "loadFactor": 0.8359,
+      "ask": 1945600,
+      "rpk": 1626400,
+      "sampleCoupons": 10,
+      "sampleRevenue": 5787.0,
+      "sampleAncillary": 265.0,
+      "sampleFlownTicket": 5522.0,
+      "sampleTax": 640.0,
+      "sampleAvgFare": 578.7,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "OTA": 2,
+        "Travel Agent": 2,
+        "NDC": 2,
+        "Direct": 2,
+        "GDS": 2
+      }
+    },
+    {
+      "flightId": "F003",
+      "airline": "6E",
+      "airlineName": "IndiGo (sample)",
+      "date": "2026-11-03",
+      "flightNumber": "6E145",
+      "origin": "DEL",
+      "destination": "DXB",
+      "sector": "DEL-DXB",
+      "aircraft": "A321neo",
+      "distanceKm": 2190,
+      "scheduledSeats": 180,
+      "operatedSeats": 180,
+      "blockedSeats": 6,
+      "sellableSeats": 174,
+      "bookedSeats": 171,
+      "flownPax": 157,
+      "loadFactor": 0.8722,
+      "ask": 394200,
+      "rpk": 343830,
+      "sampleCoupons": 10,
+      "sampleRevenue": 2202.0,
+      "sampleAncillary": 188.0,
+      "sampleFlownTicket": 2014.0,
+      "sampleTax": 264.0,
+      "sampleAvgFare": 220.2,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "Travel Agent": 2,
+        "NDC": 2,
+        "Direct": 2,
+        "GDS": 2,
+        "OTA": 2
+      }
+    },
+    {
+      "flightId": "F004",
+      "airline": "6E",
+      "airlineName": "IndiGo (sample)",
+      "date": "2026-11-04",
+      "flightNumber": "6E146",
+      "origin": "DXB",
+      "destination": "DEL",
+      "sector": "DXB-DEL",
+      "aircraft": "A321neo",
+      "distanceKm": 2190,
+      "scheduledSeats": 180,
+      "operatedSeats": 174,
+      "blockedSeats": 10,
+      "sellableSeats": 164,
+      "bookedSeats": 157,
+      "flownPax": 157,
+      "loadFactor": 0.9023,
+      "ask": 381060,
+      "rpk": 343830,
+      "sampleCoupons": 10,
+      "sampleRevenue": 2205.0,
+      "sampleAncillary": 191.0,
+      "sampleFlownTicket": 2014.0,
+      "sampleTax": 205.0,
+      "sampleAvgFare": 220.5,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "NDC": 2,
+        "Direct": 2,
+        "GDS": 2,
+        "OTA": 2,
+        "Travel Agent": 2
+      }
+    },
+    {
+      "flightId": "F005",
+      "airline": "SG",
+      "airlineName": "SpiceJet (sample)",
+      "date": "2026-11-05",
+      "flightNumber": "SG051",
+      "origin": "BOM",
+      "destination": "DXB",
+      "sector": "BOM-DXB",
+      "aircraft": "B737-800",
+      "distanceKm": 1930,
+      "scheduledSeats": 189,
+      "operatedSeats": 189,
+      "blockedSeats": 9,
+      "sellableSeats": 180,
+      "bookedSeats": 175,
+      "flownPax": 151,
+      "loadFactor": 0.7989,
+      "ask": 364770,
+      "rpk": 291430,
+      "sampleCoupons": 10,
+      "sampleRevenue": 2282.0,
+      "sampleAncillary": 268.0,
+      "sampleFlownTicket": 2014.0,
+      "sampleTax": 233.0,
+      "sampleAvgFare": 228.2,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "Direct": 2,
+        "GDS": 2,
+        "OTA": 2,
+        "Travel Agent": 2,
+        "NDC": 2
+      }
+    },
+    {
+      "flightId": "F006",
+      "airline": "SG",
+      "airlineName": "SpiceJet (sample)",
+      "date": "2026-11-06",
+      "flightNumber": "SG052",
+      "origin": "DXB",
+      "destination": "BOM",
+      "sector": "DXB-BOM",
+      "aircraft": "B737-800",
+      "distanceKm": 1930,
+      "scheduledSeats": 189,
+      "operatedSeats": 180,
+      "blockedSeats": 14,
+      "sellableSeats": 166,
+      "bookedSeats": 171,
+      "flownPax": 150,
+      "loadFactor": 0.8333,
+      "ask": 347400,
+      "rpk": 289500,
+      "sampleCoupons": 10,
+      "sampleRevenue": 2282.0,
+      "sampleAncillary": 268.0,
+      "sampleFlownTicket": 2014.0,
+      "sampleTax": 264.0,
+      "sampleAvgFare": 228.2,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "GDS": 2,
+        "OTA": 2,
+        "Travel Agent": 2,
+        "NDC": 2,
+        "Direct": 2
+      }
+    },
+    {
+      "flightId": "F007",
+      "airline": "UK",
+      "airlineName": "Vistara (sample)",
+      "date": "2026-11-07",
+      "flightNumber": "UK955",
+      "origin": "DEL",
+      "destination": "BOM",
+      "sector": "DEL-BOM",
+      "aircraft": "A320neo",
+      "distanceKm": 1150,
+      "scheduledSeats": 186,
+      "operatedSeats": 186,
+      "blockedSeats": 5,
+      "sellableSeats": 181,
+      "bookedSeats": 167,
+      "flownPax": 162,
+      "loadFactor": 0.871,
+      "ask": 213900,
+      "rpk": 186300,
+      "sampleCoupons": 10,
+      "sampleRevenue": 1306.0,
+      "sampleAncillary": 191.0,
+      "sampleFlownTicket": 1115.0,
+      "sampleTax": 114.0,
+      "sampleAvgFare": 130.6,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "OTA": 2,
+        "Travel Agent": 2,
+        "NDC": 2,
+        "Direct": 2,
+        "GDS": 2
+      }
+    },
+    {
+      "flightId": "F008",
+      "airline": "UK",
+      "airlineName": "Vistara (sample)",
+      "date": "2026-11-08",
+      "flightNumber": "UK956",
+      "origin": "BOM",
+      "destination": "DEL",
+      "sector": "BOM-DEL",
+      "aircraft": "A320neo",
+      "distanceKm": 1150,
+      "scheduledSeats": 186,
+      "operatedSeats": 180,
+      "blockedSeats": 7,
+      "sellableSeats": 173,
+      "bookedSeats": 167,
+      "flownPax": 163,
+      "loadFactor": 0.9056,
+      "ask": 207000,
+      "rpk": 187450,
+      "sampleCoupons": 10,
+      "sampleRevenue": 1309.0,
+      "sampleAncillary": 194.0,
+      "sampleFlownTicket": 1115.0,
+      "sampleTax": 127.0,
+      "sampleAvgFare": 130.9,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "Travel Agent": 2,
+        "NDC": 2,
+        "Direct": 2,
+        "GDS": 2,
+        "OTA": 2
+      }
+    },
+    {
+      "flightId": "F009",
+      "airline": "AI",
+      "airlineName": "Air India (sample)",
+      "date": "2026-11-09",
+      "flightNumber": "AI865",
+      "origin": "BOM",
+      "destination": "DEL",
+      "sector": "BOM-DEL",
+      "aircraft": "A321",
+      "distanceKm": 1150,
+      "scheduledSeats": 182,
+      "operatedSeats": 176,
+      "blockedSeats": 11,
+      "sellableSeats": 165,
+      "bookedSeats": 167,
+      "flownPax": 141,
+      "loadFactor": 0.8011,
+      "ask": 202400,
+      "rpk": 162150,
+      "sampleCoupons": 10,
+      "sampleRevenue": 4057.0,
+      "sampleAncillary": 271.0,
+      "sampleFlownTicket": 3786.0,
+      "sampleTax": 490.0,
+      "sampleAvgFare": 405.7,
+      "cabinMix": {
+        "Business": 10
+      },
+      "channelMix": {
+        "NDC": 2,
+        "Direct": 2,
+        "GDS": 2,
+        "OTA": 2,
+        "Travel Agent": 2
+      }
+    },
+    {
+      "flightId": "F010",
+      "airline": "6E",
+      "airlineName": "IndiGo (sample)",
+      "date": "2026-11-10",
+      "flightNumber": "6E210",
+      "origin": "BLR",
+      "destination": "BOM",
+      "sector": "BLR-BOM",
+      "aircraft": "A320neo",
+      "distanceKm": 840,
+      "scheduledSeats": 180,
+      "operatedSeats": 180,
+      "blockedSeats": 4,
+      "sellableSeats": 176,
+      "bookedSeats": 162,
+      "flownPax": 150,
+      "loadFactor": 0.8333,
+      "ask": 151200,
+      "rpk": 126000,
+      "sampleCoupons": 10,
+      "sampleRevenue": 1383.0,
+      "sampleAncillary": 268.0,
+      "sampleFlownTicket": 1115.0,
+      "sampleTax": 114.0,
+      "sampleAvgFare": 138.3,
+      "cabinMix": {
+        "Economy": 10
+      },
+      "channelMix": {
+        "Direct": 2,
+        "GDS": 2,
+        "OTA": 2,
+        "Travel Agent": 2,
+        "NDC": 2
+      }
+    }
+  ]
+}
