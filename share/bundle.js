@@ -242124,7 +242124,8 @@
         coupons: 0,
         ask: 0,
         rpk: 0,
-        count: 0
+        count: 0,
+        flightNumbers: /* @__PURE__ */ new Set()
       };
       row.flown += f.flownPax;
       row.operated += f.operatedSeats;
@@ -242133,10 +242134,12 @@
       row.ask += f.ask;
       row.rpk += f.rpk;
       row.count += 1;
+      if (f.flightNumber) row.flightNumbers.add(f.flightNumber);
       map.set(route, row);
     }
     return [...map.values()].map((s) => ({
       ...s,
+      flightLabel: [...s.flightNumbers].sort().join(" \xB7 "),
       lf: s.operated ? s.flown / s.operated : 0,
       avgFare: s.coupons ? s.revenue / s.coupons : 0
     })).sort((a, b) => b.revenue - a.revenue);
@@ -242152,6 +242155,24 @@
     if (parts.length >= 3) return parts.slice(1, -1).join("-");
     return "Nonstop";
   }
+  function formatOdFlightNumbers(itinerary, byLeg) {
+    const airports = itinerary.split("-").filter(Boolean);
+    const ordered = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (let i = 0; i < airports.length - 1; i++) {
+      const leg = `${airports[i]}-${airports[i + 1]}`;
+      const nums = byLeg.get(leg);
+      if (!nums) continue;
+      for (const fn of [...nums].sort()) {
+        if (seen.has(fn)) continue;
+        seen.add(fn);
+        ordered.push(fn);
+      }
+    }
+    if (ordered.length) return ordered.join(" \u2192 ");
+    const fallback = [...byLeg.values()].flatMap((s) => [...s]);
+    return [...new Set(fallback)].sort().join(" \xB7 ");
+  }
   function odMarketsFromFlights(flights) {
     const map = /* @__PURE__ */ new Map();
     for (const f of flights) {
@@ -242166,23 +242187,36 @@
         revenue: 0,
         pax: 0,
         rpk: 0,
-        flights: 0
+        operated: 0,
+        flights: 0,
+        byLeg: /* @__PURE__ */ new Map()
       };
       row.revenue += f.sampleRevenue ?? 0;
       row.pax += f.sampleCoupons ?? 0;
       row.rpk += f.rpk;
+      row.operated += f.operatedSeats;
       row.flights += 1;
+      if (f.flightNumber) {
+        const leg = `${f.origin}-${f.destination}`;
+        const set = row.byLeg.get(leg) ?? /* @__PURE__ */ new Set();
+        set.add(f.flightNumber);
+        row.byLeg.set(leg, set);
+      }
       map.set(key, row);
     }
     return [...map.values()].map((o) => ({
-      ...o,
+      market: o.market,
+      itinerary: o.itinerary,
+      connectingPoint: o.connectingPoint,
+      revenue: o.revenue,
+      pax: o.pax,
+      rpk: o.rpk,
+      operated: o.operated,
+      flights: o.flights,
+      flightLabel: formatOdFlightNumbers(o.itinerary, o.byLeg),
       avgFare: o.pax ? o.revenue / o.pax : 0,
       yieldC: o.rpk ? o.revenue / o.rpk * 100 : 0
     })).sort((a, b) => b.revenue - a.revenue);
-  }
-  function shareBar(value, max) {
-    const width = max > 0 ? Math.max(4, value / max * 100) : 0;
-    return `<span class="share-bar" aria-hidden="true"><span class="share-bar-fill" style="--w:${width}%"></span></span>`;
   }
   function viewOverview() {
     const weak = [...d.flights].sort((a, b) => a.loadFactor - b.loadFactor)[0];
@@ -242295,8 +242329,6 @@
     const topSector = sectors[0];
     const topOd = odMarkets[0];
     const yieldPeriod = agg.rpk ? agg.sampleRev / agg.rpk * 100 : 0;
-    const sectorRevMax = sectors[0]?.revenue ?? 0;
-    const odRevMax = odMarkets[0]?.revenue ?? 0;
     const ctx = viewingContext();
     return `
     <section class="page-head">
@@ -242341,17 +242373,18 @@
           <thead>
             <tr>
               <th>Sector</th>
-              <th>Flights</th>
+              <th>Flight no.</th>
+              <th>Ops</th>
               <th>Revenue</th>
-              <th class="share-col">Share</th>
+              <th>Capacity</th>
               <th>Flown</th>
-              <th>LF</th>
               <th>ASK</th>
               <th>RPK</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
-            ${empty ? `<tr><td colspan="8">No sectors in range.</td></tr>` : sectors.map((s) => {
+            ${empty ? `<tr><td colspan="9">No sectors in range.</td></tr>` : sectors.map((s) => {
       const tone = lfTone(s.lf);
       return `
                 <tr>
@@ -242359,13 +242392,14 @@
                     <strong>${s.route}</strong>
                     <div class="cell-meta">avg ${money(s.avgFare, true)}</div>
                   </td>
+                  <td><span class="flight-nos">${s.flightLabel || "\u2014"}</span></td>
                   <td class="num">${number(s.count)}</td>
                   <td class="num">${money(s.revenue)}</td>
-                  <td class="share-col">${shareBar(s.revenue, sectorRevMax)}</td>
+                  <td class="num">${number(s.operated)}</td>
                   <td class="num">${number(s.flown)}</td>
-                  <td><span class="lf-pill ${tone}">${Math.round(s.lf * 100)}%</span></td>
                   <td class="num">${compactNumber(s.ask)}</td>
                   <td class="num">${compactNumber(s.rpk)}</td>
+                  <td><span class="lf-pill ${tone}">${Math.round(s.lf * 100)}%</span></td>
                 </tr>`;
     }).join("")}
           </tbody>
@@ -242382,8 +242416,9 @@
             <tr>
               <th>O&amp;D market</th>
               <th>Connecting point</th>
+              <th>Flight legs</th>
               <th>Revenue</th>
-              <th class="share-col">Share</th>
+              <th>Capacity</th>
               <th>Pax</th>
               <th>RPK</th>
               <th>Yield</th>
@@ -242391,7 +242426,7 @@
             </tr>
           </thead>
           <tbody>
-            ${empty ? `<tr><td colspan="8">No O&amp;D markets in range.</td></tr>` : odMarkets.map((o) => {
+            ${empty ? `<tr><td colspan="9">No O&amp;D markets in range.</td></tr>` : odMarkets.map((o) => {
       const isConnect = o.connectingPoint !== "Nonstop";
       return `
                 <tr>
@@ -242402,8 +242437,9 @@
                   <td>
                     <span class="connect-pill ${isConnect ? "is-connect" : "is-direct"}">${o.connectingPoint}</span>
                   </td>
+                  <td><span class="flight-nos">${o.flightLabel || "\u2014"}</span></td>
                   <td class="num">${money(o.revenue)}</td>
-                  <td class="share-col">${shareBar(o.revenue, odRevMax)}</td>
+                  <td class="num">${number(o.operated)}</td>
                   <td class="num">${number(o.pax)}</td>
                   <td class="num">${compactNumber(o.rpk)}</td>
                   <td class="num">${o.yieldC ? `${o.yieldC.toFixed(2)}\xA2` : "\u2014"}</td>
@@ -242431,9 +242467,9 @@
               <th>Flights</th>
               <th>Flown</th>
               <th>Operated</th>
-              <th>LF</th>
               <th>ASK</th>
               <th>RPK</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
@@ -242447,9 +242483,9 @@
                   <td class="num">${w.count || "\u2014"}</td>
                   <td class="num">${w.count ? number(w.flown) : "\u2014"}</td>
                   <td class="num">${w.count ? number(w.operated) : "\u2014"}</td>
-                  <td>${w.count ? `<span class="lf-pill ${tone}">${Math.round(w.lf * 100)}%</span>` : "\u2014"}</td>
                   <td class="num">${w.count ? compactNumber(w.ask) : "\u2014"}</td>
                   <td class="num">${w.count ? compactNumber(w.rpk) : "\u2014"}</td>
+                  <td>${w.count ? `<span class="lf-pill ${tone}">${Math.round(w.lf * 100)}%</span>` : "\u2014"}</td>
                 </tr>`;
     }).join("")}
           </tbody>
@@ -242602,9 +242638,9 @@
               <th>Journey</th>
               <th>Operated</th>
               <th>Flown</th>
-              <th>LF</th>
               <th>ASK</th>
               <th>RPK</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
@@ -242621,9 +242657,9 @@
                   <td>${f.journeyType ?? "\u2014"}</td>
                   <td class="num">${number(f.operatedSeats)}</td>
                   <td class="num">${number(f.flownPax)}</td>
-                  <td><span class="lf-pill ${tone}">${Math.round(f.loadFactor * 100)}%</span></td>
                   <td class="num">${compactNumber(f.ask)}</td>
                   <td class="num">${compactNumber(f.rpk)}</td>
+                  <td><span class="lf-pill ${tone}">${Math.round(f.loadFactor * 100)}%</span></td>
                 </tr>`;
       }).join("") || `<tr><td colspan="11">No flights in range.</td></tr>`}
           </tbody>
@@ -242924,8 +242960,8 @@
               <th>Flights</th>
               <th>Operated seats</th>
               <th>Flown PAX</th>
-              <th>LF</th>
               <th>Signal</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
@@ -242938,8 +242974,8 @@
                   <td class="num">${number(m.count)}</td>
                   <td class="num">${number(m.operated)}</td>
                   <td class="num">${number(m.flown)}</td>
-                  <td><span class="lf-pill ${lfTone(m.lf)}">${Math.round(m.lf * 100)}%</span></td>
                   <td class="${cls}">${signal}</td>
+                  <td><span class="lf-pill ${lfTone(m.lf)}">${Math.round(m.lf * 100)}%</span></td>
                 </tr>`;
     }).join("")}
           </tbody>

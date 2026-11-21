@@ -515,6 +515,7 @@ function sectorsFromFlights(flights: FlightRow[]) {
     ask: number
     rpk: number
     count: number
+    flightNumbers: Set<string>
   }
   const map = new Map<string, Sector>()
   for (const f of flights) {
@@ -528,6 +529,7 @@ function sectorsFromFlights(flights: FlightRow[]) {
       ask: 0,
       rpk: 0,
       count: 0,
+      flightNumbers: new Set<string>(),
     }
     row.flown += f.flownPax
     row.operated += f.operatedSeats
@@ -536,11 +538,13 @@ function sectorsFromFlights(flights: FlightRow[]) {
     row.ask += f.ask
     row.rpk += f.rpk
     row.count += 1
+    if (f.flightNumber) row.flightNumbers.add(f.flightNumber)
     map.set(route, row)
   }
   return [...map.values()]
     .map((s) => ({
       ...s,
+      flightLabel: [...s.flightNumbers].sort().join(' · '),
       lf: s.operated ? s.flown / s.operated : 0,
       avgFare: s.coupons ? s.revenue / s.coupons : 0,
     }))
@@ -562,6 +566,26 @@ function odConnectingPoint(market: string, connectingPoint?: string | null): str
   return 'Nonstop'
 }
 
+/** Flight numbers ordered by itinerary legs when possible. */
+function formatOdFlightNumbers(itinerary: string, byLeg: Map<string, Set<string>>): string {
+  const airports = itinerary.split('-').filter(Boolean)
+  const ordered: string[] = []
+  const seen = new Set<string>()
+  for (let i = 0; i < airports.length - 1; i++) {
+    const leg = `${airports[i]}-${airports[i + 1]}`
+    const nums = byLeg.get(leg)
+    if (!nums) continue
+    for (const fn of [...nums].sort()) {
+      if (seen.has(fn)) continue
+      seen.add(fn)
+      ordered.push(fn)
+    }
+  }
+  if (ordered.length) return ordered.join(' → ')
+  const fallback = [...byLeg.values()].flatMap((s) => [...s])
+  return [...new Set(fallback)].sort().join(' · ')
+}
+
 /** O&D roll-up from filtered flights (full journey grain, not operated sector). */
 function odMarketsFromFlights(flights: FlightRow[]) {
   type OdAgg = {
@@ -571,7 +595,9 @@ function odMarketsFromFlights(flights: FlightRow[]) {
     revenue: number
     pax: number
     rpk: number
+    operated: number
     flights: number
+    byLeg: Map<string, Set<string>>
   }
   const map = new Map<string, OdAgg>()
   for (const f of flights) {
@@ -586,26 +612,38 @@ function odMarketsFromFlights(flights: FlightRow[]) {
       revenue: 0,
       pax: 0,
       rpk: 0,
+      operated: 0,
       flights: 0,
+      byLeg: new Map<string, Set<string>>(),
     }
     row.revenue += f.sampleRevenue ?? 0
     row.pax += f.sampleCoupons ?? 0
     row.rpk += f.rpk
+    row.operated += f.operatedSeats
     row.flights += 1
+    if (f.flightNumber) {
+      const leg = `${f.origin}-${f.destination}`
+      const set = row.byLeg.get(leg) ?? new Set<string>()
+      set.add(f.flightNumber)
+      row.byLeg.set(leg, set)
+    }
     map.set(key, row)
   }
   return [...map.values()]
     .map((o) => ({
-      ...o,
+      market: o.market,
+      itinerary: o.itinerary,
+      connectingPoint: o.connectingPoint,
+      revenue: o.revenue,
+      pax: o.pax,
+      rpk: o.rpk,
+      operated: o.operated,
+      flights: o.flights,
+      flightLabel: formatOdFlightNumbers(o.itinerary, o.byLeg),
       avgFare: o.pax ? o.revenue / o.pax : 0,
       yieldC: o.rpk ? (o.revenue / o.rpk) * 100 : 0,
     }))
     .sort((a, b) => b.revenue - a.revenue)
-}
-
-function shareBar(value: number, max: number): string {
-  const width = max > 0 ? Math.max(4, (value / max) * 100) : 0
-  return `<span class="share-bar" aria-hidden="true"><span class="share-bar-fill" style="--w:${width}%"></span></span>`
 }
 
 function viewOverview(): string {
@@ -725,8 +763,6 @@ function viewNetwork(): string {
   const topSector = sectors[0]
   const topOd = odMarkets[0]
   const yieldPeriod = agg.rpk ? (agg.sampleRev / agg.rpk) * 100 : 0
-  const sectorRevMax = sectors[0]?.revenue ?? 0
-  const odRevMax = odMarkets[0]?.revenue ?? 0
   const ctx = viewingContext()
 
   return `
@@ -776,19 +812,20 @@ function viewNetwork(): string {
           <thead>
             <tr>
               <th>Sector</th>
-              <th>Flights</th>
+              <th>Flight no.</th>
+              <th>Ops</th>
               <th>Revenue</th>
-              <th class="share-col">Share</th>
+              <th>Capacity</th>
               <th>Flown</th>
-              <th>LF</th>
               <th>ASK</th>
               <th>RPK</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
             ${
               empty
-                ? `<tr><td colspan="8">No sectors in range.</td></tr>`
+                ? `<tr><td colspan="9">No sectors in range.</td></tr>`
                 : sectors
                     .map((s) => {
                       const tone = lfTone(s.lf)
@@ -798,13 +835,14 @@ function viewNetwork(): string {
                     <strong>${s.route}</strong>
                     <div class="cell-meta">avg ${money(s.avgFare, true)}</div>
                   </td>
+                  <td><span class="flight-nos">${s.flightLabel || '—'}</span></td>
                   <td class="num">${number(s.count)}</td>
                   <td class="num">${money(s.revenue)}</td>
-                  <td class="share-col">${shareBar(s.revenue, sectorRevMax)}</td>
+                  <td class="num">${number(s.operated)}</td>
                   <td class="num">${number(s.flown)}</td>
-                  <td><span class="lf-pill ${tone}">${Math.round(s.lf * 100)}%</span></td>
                   <td class="num">${compactNumber(s.ask)}</td>
                   <td class="num">${compactNumber(s.rpk)}</td>
+                  <td><span class="lf-pill ${tone}">${Math.round(s.lf * 100)}%</span></td>
                 </tr>`
                     })
                     .join('')
@@ -823,8 +861,9 @@ function viewNetwork(): string {
             <tr>
               <th>O&amp;D market</th>
               <th>Connecting point</th>
+              <th>Flight legs</th>
               <th>Revenue</th>
-              <th class="share-col">Share</th>
+              <th>Capacity</th>
               <th>Pax</th>
               <th>RPK</th>
               <th>Yield</th>
@@ -834,7 +873,7 @@ function viewNetwork(): string {
           <tbody>
             ${
               empty
-                ? `<tr><td colspan="8">No O&amp;D markets in range.</td></tr>`
+                ? `<tr><td colspan="9">No O&amp;D markets in range.</td></tr>`
                 : odMarkets
                     .map((o) => {
                       const isConnect = o.connectingPoint !== 'Nonstop'
@@ -847,8 +886,9 @@ function viewNetwork(): string {
                   <td>
                     <span class="connect-pill ${isConnect ? 'is-connect' : 'is-direct'}">${o.connectingPoint}</span>
                   </td>
+                  <td><span class="flight-nos">${o.flightLabel || '—'}</span></td>
                   <td class="num">${money(o.revenue)}</td>
-                  <td class="share-col">${shareBar(o.revenue, odRevMax)}</td>
+                  <td class="num">${number(o.operated)}</td>
                   <td class="num">${number(o.pax)}</td>
                   <td class="num">${compactNumber(o.rpk)}</td>
                   <td class="num">${o.yieldC ? `${o.yieldC.toFixed(2)}¢` : '—'}</td>
@@ -879,9 +919,9 @@ function weekCompareTable(): string {
               <th>Flights</th>
               <th>Flown</th>
               <th>Operated</th>
-              <th>LF</th>
               <th>ASK</th>
               <th>RPK</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
@@ -896,9 +936,9 @@ function weekCompareTable(): string {
                   <td class="num">${w.count || '—'}</td>
                   <td class="num">${w.count ? number(w.flown) : '—'}</td>
                   <td class="num">${w.count ? number(w.operated) : '—'}</td>
-                  <td>${w.count ? `<span class="lf-pill ${tone}">${Math.round(w.lf * 100)}%</span>` : '—'}</td>
                   <td class="num">${w.count ? compactNumber(w.ask) : '—'}</td>
                   <td class="num">${w.count ? compactNumber(w.rpk) : '—'}</td>
+                  <td>${w.count ? `<span class="lf-pill ${tone}">${Math.round(w.lf * 100)}%</span>` : '—'}</td>
                 </tr>`
               })
               .join('')}
@@ -1068,9 +1108,9 @@ function viewCapacity(): string {
               <th>Journey</th>
               <th>Operated</th>
               <th>Flown</th>
-              <th>LF</th>
               <th>ASK</th>
               <th>RPK</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
@@ -1091,9 +1131,9 @@ function viewCapacity(): string {
                   <td>${f.journeyType ?? '—'}</td>
                   <td class="num">${number(f.operatedSeats)}</td>
                   <td class="num">${number(f.flownPax)}</td>
-                  <td><span class="lf-pill ${tone}">${Math.round(f.loadFactor * 100)}%</span></td>
                   <td class="num">${compactNumber(f.ask)}</td>
                   <td class="num">${compactNumber(f.rpk)}</td>
+                  <td><span class="lf-pill ${tone}">${Math.round(f.loadFactor * 100)}%</span></td>
                 </tr>`
               })
               .join('') || `<tr><td colspan="11">No flights in range.</td></tr>`}
@@ -1418,8 +1458,8 @@ function viewForecast(): string {
               <th>Flights</th>
               <th>Operated seats</th>
               <th>Flown PAX</th>
-              <th>LF</th>
               <th>Signal</th>
+              <th>LF</th>
             </tr>
           </thead>
           <tbody>
@@ -1437,8 +1477,8 @@ function viewForecast(): string {
                   <td class="num">${number(m.count)}</td>
                   <td class="num">${number(m.operated)}</td>
                   <td class="num">${number(m.flown)}</td>
-                  <td><span class="lf-pill ${lfTone(m.lf)}">${Math.round(m.lf * 100)}%</span></td>
                   <td class="${cls}">${signal}</td>
+                  <td><span class="lf-pill ${lfTone(m.lf)}">${Math.round(m.lf * 100)}%</span></td>
                 </tr>`
                     })
                     .join('')
